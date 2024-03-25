@@ -1,1 +1,165 @@
+const fs = require('fs');
+const os = require('os');
+const gpio = os.type() !== 'Windows_NT' ? require('onoff').Gpio : null;
+const record = require('node-record-lpcm16');
+const speech = require('@google-cloud/speech');
+const { execSync } = require('child_process');
+
+// Install missing packages if necessary
+function installPackage(packageName) {
+  try {
+    require.resolve(packageName);
+  } catch (e) {
+    console.log(`Installing ${packageName}...`);
+    execSync(`npm install ${packageName}`);
+  }
+}
+
+installPackage('onoff');
+installPackage('node-record-lpcm16');
+installPackage('@google-cloud/speech');
+
+// Settings
+const led = os.type() !== 'Windows_NT' ? new gpio(14, 'out') : null;
+const delay = 1000; // Set the time delay in milliseconds
+const chunkSize = 1024; // Record in chunks of 1024 samples
+const sampleFormat = 's16le'; // 16 bits per sample
+const channels = 2; // 2 Channels
+const sampleRate = 44100; // Record at 44100 samples per second
+const seconds = 3; // recording time
+const filename = 'Output.wav';
+
+function dot() {
+  if (led) {
+    Bangle.buzz(100);
+
+  }
+}
+
+function dash() {
+  if (led) {
+    Bangle.buzz(1000);
+
+  }
+}
+
+async function main() {
+  while (true) {
+    // Record Audio
+    console.log('Recording');
+
+    const recording = record.start({
+      sampleRate: sampleRate,
+      verbose: false,
+      recordProgram: 'rec', // Use the 'rec' command for recording
+      silence: '3.0', // Stop recording after 3 seconds of silence
+      threshold: 0.5, // Silence threshold (0.5 is a typical value)
+    });
+
+    const chunks = [];
+
+    recording.stream().on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        record.stop();
+        resolve();
+      }, seconds * 1000)
+    );
+
+    console.log('Finished recording');
+
+    // Save the recorded data as a WAV file
+    const data = Buffer.concat(chunks);
+    fs.writeFileSync(filename, data);
+
+    // Audio to Morse code
+    if (os.type() !== 'Windows_NT') {
+      // Setting buzzer pins
+      gpio.setMode(gpio.MODE_BCM);
+      gpio.setWarnings(false);
+    }
+
+    const client = new speech.SpeechClient();
+
+  try {
+      // Convert audio to text
+      const [response] = await client.recognize({
+        audio: {
+          content: data.toString('base64'),
+        },
+        config: {
+          encoding: 'LINEAR16',
+        }
+
+(function(back) {
+  var FILE = "myapp.json";
+  // Load settings
+  var settings = Object.assign({
+    something: 123,
+  }, require('Storage').readJSON(FILE, true) || {});
+
+  function writeSettings() {
+    require('Storage').writeJSON(FILE, settings);
+  }
+
+  // Show the menu
+  E.showMenu({
+    "" : { "title" : "App Name" },
+    "< Back" : () => back(),
+    'On or off?': {
+      value: !!settings.onoroff,  // !! converts undefined to false
+      onchange: v => {
+        settings.onoroff = v;
+        writeSettings();
+      }
+      // format: ... may be specified as a function which converts the value to a string
+      // if the value is a boolean, showMenu() will convert this automatically, which
+      // keeps settings menus consistent
+    },
+    'How Many?': {
+      value: 0|settings.howmany,  // 0| converts undefined to 0
+      min: 0, max: 10,
+      onchange: v => {
+        settings.howmany = v;
+        writeSettings();
+      }
+    },
+  });
+}))(load);
+
+// Draw a button on the screen
+var Layout = require("Layout");
+var layout = new Layout( {
+  type:"v", c: [
+    {type:"btn", font:"6x8:2", label:"Phone", pad: "3", cb: l=>phone() },
+    {type:"btn", font:"6x8:2", label:"Mic", pad: "3", cb: l=>phone() },
+    {type:"btn", font:"6x8:2", label:"Settings", pad: "3", cb: l=>phone() }
+    ]
+});
+
+function phone(x) {
+  var devices;
+NRF.findDevices(function(d) {
+  devices = d;
+  console.log(devices);
+}, 1000);
+  
+}
+
+function mic(x) {
+  NRF.findDevices(function(d) {
+  devices = d;
+  console.log(devices);
+}, 1000);
+}
+
+function settings(x) {
+  load();
+}
+
+g.clear();
+layout.render();
 
